@@ -12,6 +12,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Check, Watch } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const AVAILABLE_DEVICES = [
+  { id: "fitband-5", name: "FitBand 5", type: "Smart Band" },
+  { id: "healthwatch-pro", name: "HealthWatch Pro", type: "Smartwatch" },
+  { id: "vitalmonitor-x", name: "VitalMonitor X", type: "Health Tracker" },
+  { id: "pulsetrack-elite", name: "PulseTrack Elite", type: "Fitness Tracker" },
+  { id: "carelink-band", name: "CareLink Band", type: "Medical Device" },
+];
 
 interface AddMemberModalProps {
   open: boolean;
@@ -28,13 +43,20 @@ const AddMemberModal = ({ open, onOpenChange, onAdd }: AddMemberModalProps) => {
   });
   const [isPairing, setIsPairing] = useState(false);
   const [isPaired, setIsPaired] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<string>("");
 
   const handlePairDevice = async () => {
+    if (!selectedDevice) {
+      toast.error("Please select a device first");
+      return;
+    }
+    
     setIsPairing(true);
     setTimeout(() => {
       setIsPaired(true);
       setIsPairing(false);
-      toast.success("Device paired successfully!");
+      const device = AVAILABLE_DEVICES.find(d => d.id === selectedDevice);
+      toast.success(`${device?.name} paired successfully!`);
     }, 2500);
   };
 
@@ -46,10 +68,11 @@ const AddMemberModal = ({ open, onOpenChange, onAdd }: AddMemberModalProps) => {
       return;
     }
 
+    const device = AVAILABLE_DEVICES.find(d => d.id === selectedDevice);
     onAdd({
       ...formData,
       age: parseInt(formData.age),
-      deviceId: "FitBand-" + Math.random().toString(36).substr(2, 9),
+      deviceId: `${device?.name}-${Math.random().toString(36).substr(2, 9)}`,
     });
 
     setFormData({
@@ -59,6 +82,7 @@ const AddMemberModal = ({ open, onOpenChange, onAdd }: AddMemberModalProps) => {
       healthHistory: "",
     });
     setIsPaired(false);
+    setSelectedDevice("");
   };
 
   return (
@@ -125,32 +149,53 @@ const AddMemberModal = ({ open, onOpenChange, onAdd }: AddMemberModalProps) => {
             />
           </div>
 
-          <div className="space-y-2 p-4 rounded-lg border bg-muted/50">
+          <div className="space-y-3 p-4 rounded-lg border bg-muted/50">
             <Label className="flex items-center gap-2">
               <Watch className="w-4 h-4" />
               Pair Wearable Device
             </Label>
+            
             {!isPaired ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handlePairDevice}
-                disabled={isPairing}
-              >
-                {isPairing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Searching for devices...
-                  </>
-                ) : (
-                  "Start Pairing"
-                )}
-              </Button>
+              <>
+                <Select value={selectedDevice} onValueChange={setSelectedDevice}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a device to pair" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABLE_DEVICES.map((device) => (
+                      <SelectItem key={device.id} value={device.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{device.name}</span>
+                          <span className="text-xs text-muted-foreground">{device.type}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handlePairDevice}
+                  disabled={isPairing || !selectedDevice}
+                >
+                  {isPairing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Pairing device...
+                    </>
+                  ) : (
+                    "Pair Device"
+                  )}
+                </Button>
+              </>
             ) : (
               <div className="flex items-center gap-2 text-success p-2 bg-success/10 rounded">
                 <Check className="w-5 h-5" />
-                <span className="text-sm font-medium">FitBand 5 Connected</span>
+                <span className="text-sm font-medium">
+                  {AVAILABLE_DEVICES.find(d => d.id === selectedDevice)?.name} Connected
+                </span>
               </div>
             )}
           </div>

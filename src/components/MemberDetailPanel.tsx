@@ -2,21 +2,33 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, Activity, TrendingUp, AlertTriangle, RefreshCw, Lightbulb, Loader2 } from "lucide-react";
+import { Heart, Activity, TrendingUp, AlertTriangle, RefreshCw, Lightbulb, Loader2, Trash2 } from "lucide-react";
 import { Member } from "@/pages/Dashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AlertActionsModal from "./AlertActionsModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface MemberDetailPanelProps {
   member: Member;
   allMembers: Member[];
+  onMemberDeleted: () => void;
 }
 
-const MemberDetailPanel = ({ member, allMembers }: MemberDetailPanelProps) => {
+const MemberDetailPanel = ({ member, allMembers, onMemberDeleted }: MemberDetailPanelProps) => {
   const [insights, setInsights] = useState<{ summary: string; recommendation: string } | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const isAlert = member.status === "Alert";
 
   useEffect(() => {
@@ -48,6 +60,23 @@ const MemberDetailPanel = ({ member, allMembers }: MemberDetailPanelProps) => {
       toast.error("Failed to load AI insights");
     } finally {
       setIsLoadingInsights(false);
+    }
+  };
+
+  const handleDeleteMember = async () => {
+    try {
+      const { error } = await supabase
+        .from("members")
+        .delete()
+        .eq("id", member.id);
+
+      if (error) throw error;
+
+      toast.success(`${member.name} has been removed`);
+      onMemberDeleted();
+    } catch (error: any) {
+      console.error("Failed to delete member:", error);
+      toast.error("Failed to remove member");
     }
   };
 
@@ -84,10 +113,25 @@ const MemberDetailPanel = ({ member, allMembers }: MemberDetailPanelProps) => {
             <p className="text-sm text-muted-foreground mt-1">
               {member.relationship}, {member.age} years old
             </p>
+            {member.device_id && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Device: {member.device_id}
+              </p>
+            )}
           </div>
-          <Badge variant={isAlert ? "destructive" : "secondary"} className="text-sm">
-            {member.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={isAlert ? "destructive" : "secondary"} className="text-sm">
+              {member.status}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
@@ -169,6 +213,27 @@ const MemberDetailPanel = ({ member, allMembers }: MemberDetailPanelProps) => {
         onOpenChange={setShowAlertModal}
         memberName={member.name}
       />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {member.name} from your monitored members. 
+              All health data associated with this member will be deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMember}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove Member
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

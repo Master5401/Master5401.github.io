@@ -110,12 +110,18 @@ const Dashboard = () => {
       setMembers(membersWithVitals);
       if (membersWithVitals.length > 0) {
         setSelectedMember(membersWithVitals[0]);
+      } else {
+        setSelectedMember(null);
       }
     } catch (error: any) {
       toast.error("Failed to load members");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleMemberDeleted = () => {
+    loadMembers();
   };
 
   const handleSignOut = async () => {
@@ -224,6 +230,7 @@ const Dashboard = () => {
                 <MemberDetailPanel
                   member={selectedMember}
                   allMembers={members}
+                  onMemberDeleted={handleMemberDeleted}
                 />
               )}
             </section>
